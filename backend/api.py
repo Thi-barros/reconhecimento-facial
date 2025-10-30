@@ -277,6 +277,33 @@ async def check_access_camera(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 
+@app.get("/users/email/{email}")
+async def get_user_by_email(email: str, db: Session = Depends(get_db)):
+    """
+    Buscar usuário autorizado pelo email.
+    Usado pelo frontend para determinar o nível de acesso após reconhecimento facial.
+    """
+    try:
+        user = db.query(AuthorizedUser).filter(AuthorizedUser.email == email).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+        return {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "access_level": user.access_level,
+            "is_active": user.is_active,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao buscar usuário por email: {e}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+
+
 @app.get("/access/logs")
 async def get_access_logs(limit: int = 50, db: Session = Depends(get_db)):
     """Obter logs de tentativas de acesso"""
