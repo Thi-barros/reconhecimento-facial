@@ -13,7 +13,7 @@ import { CameraAlt, CheckCircle, Cancel } from '@mui/icons-material';
 import { apiService, AccessResponse } from '../services/api';
 
 interface CameraAccessProps {
-    onAccessResult?: (result: AccessResponse) => void;
+    onAccessResult?: (email: string) => void;
 }
 
 const CameraAccess: React.FC<CameraAccessProps> = ({ onAccessResult }) => {
@@ -91,7 +91,10 @@ const CameraAccess: React.FC<CameraAccessProps> = ({ onAccessResult }) => {
             }
             const result = await apiService.checkAccess(imageFile);
             setLastResult(result);
-            onAccessResult?.(result);
+            if (result.access_granted && result.user_email){
+                 onAccessResult?.(result.user_email);
+            }
+            //onAccessResult?.(result);
         } catch (err: any) {
             setError(err.message || 'Erro ao verificar acesso');
             console.error('Erro na verificação:', err);
@@ -196,11 +199,10 @@ const CameraAccess: React.FC<CameraAccessProps> = ({ onAccessResult }) => {
                             sx={{ fontSize: 18, mb: 1, mt: 1, px: 2 }}
                         />
                         <Typography variant="body2" color="textSecondary">
-                            Confiança: {
-                            lastResult.confidence_score !== undefined && lastResult.confidence_score !== null
-                            ? Number(lastResult.confidence_score).toFixed(1)
-                            : 'N/A'
-                            }%
+                            Confiança: {' '}
+                            {lastResult?.confidence_score 
+                            ? parseFloat(String(lastResult.confidence_score).replace('%', '')).toFixed(1)
+                            : 'N/A%'}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
                             {lastResult.message}

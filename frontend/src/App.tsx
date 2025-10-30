@@ -1,4 +1,4 @@
-import React, { useState } from 'react';;
+import React, { useState } from 'react';
 import{
     AppBar,
     Toolbar,
@@ -12,11 +12,12 @@ import{
     CssBaseline,
 } from '@mui/material';
 
-import { Security, Dashboard as DashboardIcon, People, Camera } from '@mui/icons-material';
+import { Security, Dashboard as DashboardIcon, People, Camera, Description } from '@mui/icons-material';
 
 import Dashboard from './components/Dashboard';
 import CameraAccess from './components/CameraAccess';
 import UserManagement from './components/UserManagement';
+import DocumentsManagements from './components/DocumentsManagement';
 
 const theme = createTheme({
     palette: {
@@ -37,6 +38,7 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
     const { children, value, index, ...other } = props;
+    
 
     return (        <div
             role="tabpanel"
@@ -54,8 +56,12 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
+
+
 const App: React.FC = () => {
     const [currentTab, setCurrentTab] = useState(0);
+
+    const [loggedUserEmail, setLoggedUserEmail] = useState<string>(""); // email do usuário logado
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setCurrentTab(newValue);
@@ -95,7 +101,14 @@ const App: React.FC = () => {
                                 id="tab-2"
                                 aria-controls="tabpanel-2"
                             />
+                            <Tab
+                            icon={<Description />}
+                            label="Documentos"
+                            id="tab-3"
+                            aria-controls="tabpanel-3"
+                        />
                         </Tabs>
+                        
                     </Box>
 
                     <TabPanel value={currentTab} index={0}>
@@ -103,11 +116,15 @@ const App: React.FC = () => {
                     </TabPanel>
 
                     <TabPanel value={currentTab} index={1}>
-                        <CameraAccess />
+                        <CameraAccess onAccessResult={(email) => setLoggedUserEmail(email)}/>
                     </TabPanel>
 
                     <TabPanel value={currentTab} index={2}>
                         <UserManagement />
+                    </TabPanel>
+
+                    <TabPanel value={currentTab} index={3}>
+                         <DocumentsManagements userEmail={loggedUserEmail} />
                     </TabPanel>
                 </Container>
             </Box>
