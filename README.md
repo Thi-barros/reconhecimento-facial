@@ -1,5 +1,5 @@
 # 🔐 Controle de Acesso Facial
-
+  
 Sistema completo de **controle de acesso por reconhecimento facial**, desenvolvido com **FastAPI (Python)** no back-end e **React (TypeScript)** no front-end.
 
 O projeto permite autenticação facial, gerenciamento de usuários e documentos com diferentes níveis de permissão, e registro detalhado de logs de acesso.
