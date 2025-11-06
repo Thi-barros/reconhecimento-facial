@@ -8,7 +8,7 @@ import base64
 import io
 import os
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 import logging
 from functools import wraps
@@ -19,6 +19,11 @@ from models import (UserCreate, UserResponse, AccessResponse, UserUpdate, Docume
                 AccessLevel as ModelAccessLevel)
 from face_recognition_module import FaceRecognitionSystem
 
+
+# Dicionário para rastrear tentativas falhas
+failed_attempts = {}
+BLOCK_DURATION = timedelta(seconds=60)  # 1 minuto
+MAX_ATTEMPTS = 3
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -170,6 +175,25 @@ async def check_access(image: UploadFile = File(...), db: Session = Depends(get_
     """Verificar acesso baseado na imagem da câmera"""
     user = None
 
+    client_ip = "default"
+    try:
+        from fastapi import Request
+        # se quiser capturar IP real em produção, adicione `request: Request` como parâmetro
+    except ImportError:
+        pass
+
+    # Verifica se o IP está bloqueado
+    now = datetime.now()
+    if client_ip in failed_attempts:
+        data = failed_attempts[client_ip]
+        if data.get("blocked_until") and data["blocked_until"] > now:
+            remaining = int((data["blocked_until"] - now).total_seconds())
+            raise HTTPException(
+                status_code=429,
+                detail=f"Acesso temporariamente bloqueado. Tente novamente em {remaining} segundos."
+            )
+
+
     try:
         # Validar imagem
         if not image.content_type.startswith('image/'):
@@ -214,6 +238,21 @@ async def check_access(image: UploadFile = File(...), db: Session = Depends(get_
         else:
             message = "Acesso negado - Pessoa não autorizada"
             logger.warning("Acesso negado - Pessoa não autorizada")
+        
+            # Controle de tentativas falhas
+        if access_granted:
+            # resetar tentativas em caso de sucesso
+            if client_ip in failed_attempts:
+                failed_attempts.pop(client_ip)
+        else:
+            data = failed_attempts.get(client_ip, {"count": 0, "blocked_until": None})
+            data["count"] += 1
+            if data["count"] >= MAX_ATTEMPTS:
+                data["blocked_until"] = now + BLOCK_DURATION
+                data["count"] = 0  # reset contador após bloqueio
+                logger.warning(f"IP {client_ip} bloqueado por {BLOCK_DURATION.seconds} segundos.")
+            failed_attempts[client_ip] = data
+
 
         confidence_value= confidence if confidence is not None else 0.0
 
@@ -314,7 +353,8 @@ async def get_access_logs(limit: int = 50, db: Session = Depends(get_db)):
             "user_name": log.user_name,
             "access_granted": log.access_granted,
             "timestamp": log.timestamp,
-            "confidence_score": log.confidence_score
+            "confidence_score": log.confidence_score,
+            "access_type": log.access_type
         }
         for log in logs
     ]
@@ -354,13 +394,17 @@ async def get_stats(db: Session = Depends(get_db)):
     total_attempts = db.query(AccessLog).count()
     granted_attempts = db.query(AccessLog).filter(AccessLog.access_granted == True).count()
     denied_attempts = total_attempts - granted_attempts
+    now = datetime.now()
+    current_lockouts = sum(1 for ip, data in failed_attempts.items() if data.get("blocked_until") and data["blocked_until"] > now)
+
 
     return {
         "total_authorized_users": total_users,
         "total_access_attempts": total_attempts,
         "granted_attempts": granted_attempts,
         "denied_attempts": denied_attempts,
-        "success_rate": (granted_attempts / total_attempts * 100) if total_attempts > 0 else 0
+        "success_rate": (granted_attempts / total_attempts * 100) if total_attempts > 0 else 0,
+        "current_lockouts": current_lockouts
     }
 
 def require_access_level(required_level: AccessLevel):

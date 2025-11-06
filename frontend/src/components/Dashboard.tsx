@@ -131,7 +131,20 @@ const Dashboard: React.FC = () => {
                         </Card>
                     </Grid>
                 </Grid>
+                
             )}
+            <Grid item xs={12} sm={6} md={3}>
+                <Card>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                    <Cancel sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
+                    <Typography variant="h4" component="div">
+                        {stats?.current_lockouts ?? 0}
+                    </Typography>
+                    <Typography color="text.secondary">Bloqueios Ativos</Typography>
+                    </CardContent>
+                </Card>
+            </Grid>
+
 
             {/* Log de Acessos */}
             <Card>
@@ -151,6 +164,7 @@ const Dashboard: React.FC = () => {
                                     <TableCell>Usuário</TableCell>
                                     <TableCell align="center">Status</TableCell>
                                     <TableCell align="center">Confiança</TableCell>
+                                    <TableCell align="center">Tipo</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -169,6 +183,13 @@ const Dashboard: React.FC = () => {
                                             <TableCell>{log.user_name || 'Não identificado'}</TableCell>
                                             <TableCell align="center">{getAccessChip(log.access_granted)}</TableCell>
                                             <TableCell align="center">{log.confidence_score || '-'}</TableCell>
+                                            <TableCell align="center">
+                                                {log.access_type === 'lockout' ? (
+                                                <Chip label="Bloqueio" color="warning" size="small" />
+                                                ) : (
+                                                <Chip label={log.access_type || '—'} size="small" />
+                                                )}
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 )}

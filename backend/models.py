@@ -73,6 +73,8 @@ class AccessResponse(BaseModel):
     message: str
     confidence_score: Optional[str] = None
     access_level: Optional[AccessLevel] = None
+    locked: Optional[bool] = False
+    lock_remaining_seconds: Optional[int] = None
 
 
 class DocumentAccessResponse(BaseModel):

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000/api'; // Replace with your backend API URL
+const API_BASE_URL = 'http://localhost:8000/api';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -62,6 +62,8 @@ export interface AccessResponse {
     message: string;
     confidence_score?: number | null;
     access_level?: AccessLevel;
+    locked?: boolean;
+    lock_remaining_seconds?: number;
 }
 
 export interface AccessLog {
@@ -70,6 +72,7 @@ export interface AccessLog {
     access_granted: boolean;
     timestamp: string;
     confidence_score: string | null;
+    access_type?: 'facial_recognition' | 'document_access' | 'document_download' | 'lockout';
 }
 
 export interface Stats {
@@ -78,6 +81,7 @@ export interface Stats {
     granted_attempts: number;
     denied_attempts: number;
     success_rate: number;
+    current_lockouts?: number;
 }
 
 export interface LevelInfo{
@@ -122,19 +126,67 @@ export const apiService = {
 
 
     async checkAccess(imageFile: File): Promise<AccessResponse> {
-        const formData = new FormData();
-        formData.append('image', imageFile);
+    const formData = new FormData();
+    formData.append('image', imageFile);
 
+    try {
+        // validateStatus pra não jogar exceção automaticamente
         const response = await api.post<AccessResponse>('/access/check', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data', 
-            },
+        headers: { 'Content-Type': 'multipart/form-data' },
+        validateStatus: () => true,
         });
+
+        // Se o back já devolve { locked: true } (200 ou 429 tratado no servidor)
+        if ((response.data as any)?.locked) {
+        return {
+            access_granted: false,
+            message: response.data.message || 'Acesso temporariamente bloqueado.',
+            locked: true,
+            lock_remaining_seconds: (response.data as any).lock_remaining_seconds ?? 60,
+        };
+        }
+
+        // Se for 429 padrão (FastAPI HTTPException), montar resposta manual
+        if (response.status === 429) {
+        const data = response.data as any;
+        const msg =
+            data?.message ||
+            data?.detail ||
+            'Acesso temporariamente bloqueado. Tente novamente em breve.';
+        const remaining =
+            typeof data?.lock_remaining_seconds === 'number' ? data.lock_remaining_seconds : 60;
+
+        return {
+            access_granted: false,
+            message: msg,
+            locked: true,
+            lock_remaining_seconds: remaining,
+        };
+        }
+
+        // Fluxo normal 2xx
         return response.data;
+    } catch (err: any) {
+        // Erros “de verdade” (rede, CORS, etc.)
+        if (axios.isAxiosError(err) && err.response?.status === 429) {
+        const data = err.response.data as any;
+        return {
+            access_granted: false,
+            message:
+            data?.message ||
+            data?.detail ||
+            'Acesso temporariamente bloqueado. Tente novamente em breve.',
+            locked: true,
+            lock_remaining_seconds:
+            typeof data?.lock_remaining_seconds === 'number' ? data.lock_remaining_seconds : 60,
+        };
+        }
+        throw err;
+    }
     },
 
     async checkAccessCamera(): Promise<AccessResponse> {
-        const response = await api.get<AccessResponse>('/access/check_camera');
+        const response = await api.get<AccessResponse>('/access/check-camera');
         return response.data;
     },
     
