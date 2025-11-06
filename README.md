@@ -1,4 +1,4 @@
-# 🔐 Facial Access Control
+# 🔐 Controle de Acesso Facial
 
 Sistema completo de **controle de acesso por reconhecimento facial**, desenvolvido com **FastAPI (Python)** no back-end e **React (TypeScript)** no front-end.
 
@@ -9,6 +9,7 @@ O projeto permite autenticação facial, gerenciamento de usuários e documentos
 ## 🚀 Tecnologias Principais
 
 ### **Back-end**
+
 - [FastAPI](https://fastapi.tiangolo.com/) — framework moderno e performático.
 - [Uvicorn](https://www.uvicorn.org/) — servidor ASGI para rodar o FastAPI.
 - [OpenCV](https://opencv.org/) — captura e manipulação de imagens.
@@ -135,4 +136,5 @@ GET	/documents/{id}/download	Baixa documento permitido.
 GET	/stats	Estatísticas de uso e bloqueios.
 
 📜 Licença
+
 Este projeto é de uso acadêmico e pode ser adaptado para fins educacionais ou de demonstração.
